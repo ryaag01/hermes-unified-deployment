@@ -1,0 +1,129 @@
+version: '3.9'
+
+services:
+  # ASSIST_OS Service - Governance & Policy Framework
+  assist-os:
+    build:
+      context: ./services/assist-os
+      dockerfile: Dockerfile
+    container_name: hermes-assist-os
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - SERVICE_NAME=assist-os
+      - GATEWAY_URL=http://gateway:8080
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs/assist-os:/app/logs
+      - ./config:/app/config:ro
+    networks:
+      - hermes-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - gateway
+
+  # Ruflo Service - Real-time Collaboration
+  ruflo:
+    build:
+      context: ./services/ruflo
+      dockerfile: Dockerfile
+    container_name: hermes-ruflo
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - SERVICE_NAME=ruflo
+      - GATEWAY_URL=http://gateway:8080
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs/ruflo:/app/logs
+      - ./config:/app/config:ro
+    networks:
+      - hermes-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - gateway
+
+  # GStack Service - Enterprise Agent Framework
+  gstack:
+    build:
+      context: ./services/gstack
+      dockerfile: Dockerfile
+    container_name: hermes-gstack
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - SERVICE_NAME=gstack
+      - GATEWAY_URL=http://gateway:8080
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs/gstack:/app/logs
+      - ./config:/app/config:ro
+    networks:
+      - hermes-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - gateway
+
+  # API Gateway - Unified Router
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: hermes-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - SERVICE_NAME=gateway
+      - LOG_LEVEL=info
+      - ASSIST_OS_URL=http://assist-os:3000
+      - RUFLO_URL=http://ruflo:3001
+      - GSTACK_URL=http://gstack:3002
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs/gateway:/app/logs
+    networks:
+      - hermes-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  hermes-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/16
+
+volumes:
+  logs:
+    driver: local
